@@ -154,4 +154,4 @@ If you use this model in production or research, please cite:
 
 `Ombura, Felix et al. "maxAI: Intermittent Cashflow Forecasting & Anomaly Detection", 2025.`
 
-Contact / maintainers: `support@your-org.example`
+Contact / maintainers: `felixombura@gmail.com`
