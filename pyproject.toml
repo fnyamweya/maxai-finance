@@ -1,0 +1,34 @@
+
+[project]
+name = "maxai-finance"
+version = "0.1.0"
+description = "maxAI — Finance Intelligence: Cashflow forecasting & anomaly radar for ERPs"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{name="Felix Ombura"}]
+license = {text="Apache-2.0"}
+dependencies = [
+  "pandas>=2.2.2",
+  "numpy>=1.26.4",
+  "scikit-learn>=1.5.1",
+  "joblib>=1.4.2",
+  "fastapi>=0.110.0",
+  "uvicorn>=0.30.0",
+  "gradio>=4.44.0",
+  "python-dateutil>=2.9.0.post0",
+  "click>=8.1.7",
+  "matplotlib>=3.8.4"
+]
+
+[project.urls]
+homepage = "https://huggingface.co"
+repository = "https://github.com/skyver-group/maxai-finance"
+
+[project.scripts]
+maxai-train-cash = "maxai.cli:train_cash"
+maxai-forecast-cash = "maxai.cli:forecast_cash"
+maxai-api = "maxai.api:main"
+maxai-space-demo = "maxai.space_app:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

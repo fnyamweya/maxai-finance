@@ -1,0 +1,86 @@
+# Byte-compiled / Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Virtualenvs / pyenv
+venv/
+.venv/
+venv*/
+.env
+.env.*
+.envrc
+.pyenv/
+.python-version
+
+# IDEs / editors
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Jupyter
+.ipynb_checkpoints
+
+# pytest
+.pytest_cache/
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+
+# Logs
+logs/
+*.log
+
+# Data, models, large artifacts (ignore by default)
+# If you want to keep small sample files in data/ (e.g., sample CSVs), remove or comment out the next line.
+data/
+artifacts/
+hf_export/
+models/
+*.joblib
+*.onnx
+*.pkl
+*.model
+
+# Hugging Face / tokens (local artifacts)
+.hf/
+.huggingface/
+*.huggingface
+.hf_api_token
+
+# Docker
+docker-compose.override.yml
+.env.docker
+
+# OS / misc
+Thumbs.db
+
+# Documentation build
+docs/_build/
+
+# Generated packages / zips
+*.zip
+maxai-finance.zip

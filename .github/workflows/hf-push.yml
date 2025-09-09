@@ -1,0 +1,101 @@
+name: Push Hugging Face
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "modelcard.md"
+      - "docs/modelcard.md"
+      - "README.md"
+
+permissions:
+  contents: write
+
+env:
+  HF_REPO: "felixombura/maxai-finance-cash"
+  SOURCE_PATH: "modelcard.md"
+  DEST_PATH: "modelcard.md"
+
+jobs:
+  sync-to-hf:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install huggingface_hub pyyaml git+https://github.com/git-lfs/git-lfs || true
+          # Ensure git-lfs is available
+          sudo apt-get update -y
+          sudo apt-get install -y git-lfs || true
+          git lfs install || true
+
+      - name: Validate YAML frontmatter in source modelcard
+        run: |
+          python - <<'PY'
+          import re, sys, yaml, pathlib
+          p = pathlib.Path("${{ env.SOURCE_PATH }}")
+          if not p.exists():
+              print(f"Source path {p} not found; aborting.")
+              sys.exit(1)
+          s = p.read_text(encoding='utf-8')
+          m = re.match(r'^---\n(.*?)\n---\n', s, flags=re.S)
+          if not m:
+              print("ERROR: No YAML frontmatter found at top of file. Add frontmatter (--- ... ---) to the file.")
+              sys.exit(2)
+          try:
+              meta = yaml.safe_load(m.group(1))
+          except Exception as e:
+              print("ERROR: Invalid YAML frontmatter:", e)
+              sys.exit(3)
+          required = ("language","license")
+          for r in required:
+              if r not in meta:
+                  print(f"ERROR: frontmatter missing required key: {r}")
+                  sys.exit(4)
+          print("YAML frontmatter validated.")
+          PY
+
+      - name: Clone Hugging Face model repo (via token)
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          set -e
+          echo "Cloning https://huggingface.co/${{ env.HF_REPO }} ..."
+          rm -rf hf-repo || true
+          # Use token-based clone; ensure token has write access to the HF repo
+          git clone https://x-access-token:${HF_TOKEN}@huggingface.co/${{ env.HF_REPO }} hf-repo
+          ls -la hf-repo
+
+      - name: Copy modelcard to HF repo
+        run: |
+          set -e
+          # Use env vars: SOURCE_PATH -> DEST_PATH inside hf-repo
+          cp -v "${{ env.SOURCE_PATH }}" "hf-repo/${{ env.DEST_PATH }}"
+          # Also copy README if you want (optional)
+          # cp -v README.md hf-repo/README.md || true
+          cd hf-repo
+          git config user.email "github-actions@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          # show diff
+          git status --porcelain
+          git add "${{ env.DEST_PATH }}" || true
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Auto-sync modelcard from GitHub -> Hugging Face (via Actions)" || true
+            git push origin HEAD:main
+          fi
+
+      - name: Success message
+        run: echo "Sync complete. If there were changes, they have been pushed to https://huggingface.co/${{ env.HF_REPO }}"
