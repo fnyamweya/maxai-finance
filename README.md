@@ -11,7 +11,19 @@ tags:
 library_name: "scikit-learn"
 datasets:
   - "custom/csv"
-inference: "python_function"
+metrics:
+  wql: "see-modelcard"
+  mase: "see-modelcard"
+  rmse: "see-modelcard"
+inference: true
+model-index:
+  - name: "maxAI-cash-quantile"
+    results:
+      - task: "time-series-forecasting"
+        dataset: "tenant_csv_samples"
+        metrics:
+          wql_p50: "see-modelcard"
+          mase: "see-modelcard"
 ---
 
 # maxAI — Finance Intelligence (Cashflow + Anomaly)
