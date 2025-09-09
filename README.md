@@ -1,31 +1,3 @@
----
-language: "en"
-license: "apache-2.0"
-tags:
-  - "time-series"
-  - "forecasting"
-  - "finance"
-  - "quantile-regression"
-  - "cashflow"
-  - "anomaly-detection"
-library_name: "scikit-learn"
-datasets:
-  - "custom/csv"
-metrics:
-  wql: "see-modelcard"
-  mase: "see-modelcard"
-  rmse: "see-modelcard"
-inference: true
-model-index:
-  - name: "maxAI-cash-quantile"
-    results:
-      - task: "time-series-forecasting"
-        dataset: "tenant_csv_samples"
-        metrics:
-          wql_p50: "see-modelcard"
-          mase: "see-modelcard"
----
-
 # maxAI — Finance Intelligence (Cashflow + Anomaly)
 
 **Tagline:** _See the money before it moves._  
