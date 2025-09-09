@@ -20,22 +20,25 @@ env:
 jobs:
   sync-to-hf:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
 
-      - name: Set up Python
+      - name: Set up Python 3.11
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
 
-      - name: Install tools
+      - name: Install tools & deps (pyyaml, huggingface_hub, git-lfs)
         run: |
+          set -e
           python -m pip install --upgrade pip
-          pip install huggingface_hub pyyaml git+https://github.com/git-lfs/git-lfs || true
-          # Ensure git-lfs is available
+          # Install PyYAML (for frontmatter validation) and huggingface_hub (optional)
+          pip install pyyaml huggingface_hub
+          # Ensure git-lfs is available for pushing large files (optional for model artifacts)
           sudo apt-get update -y
           sudo apt-get install -y git-lfs || true
           git lfs install || true
@@ -46,9 +49,10 @@ jobs:
           import re, sys, yaml, pathlib
           p = pathlib.Path("${{ env.SOURCE_PATH }}")
           if not p.exists():
-              print(f"Source path {p} not found; aborting.")
+              print(f"ERROR: Source path {p} not found; aborting.")
               sys.exit(1)
           s = p.read_text(encoding='utf-8')
+          # Look for YAML frontmatter at the top of the file
           m = re.match(r'^---\n(.*?)\n---\n', s, flags=re.S)
           if not m:
               print("ERROR: No YAML frontmatter found at top of file. Add frontmatter (--- ... ---) to the file.")
@@ -58,13 +62,21 @@ jobs:
           except Exception as e:
               print("ERROR: Invalid YAML frontmatter:", e)
               sys.exit(3)
-          required = ("language","license")
-          for r in required:
-              if r not in meta:
-                  print(f"ERROR: frontmatter missing required key: {r}")
-                  sys.exit(4)
+          # Required frontmatter keys
+          required = ("language", "license")
+          missing = [r for r in required if r not in (meta or {})]
+          if missing:
+              print(f"ERROR: frontmatter missing required key(s): {', '.join(missing)}")
+              sys.exit(4)
           print("YAML frontmatter validated.")
           PY
+
+      - name: Ensure HF_TOKEN is set
+        run: |
+          if [ -z "${{ secrets.HF_TOKEN }}" ]; then
+            echo "ERROR: HF_TOKEN secret not found. Add it in repository Settings -> Secrets -> Actions."
+            exit 1
+          fi
 
       - name: Clone Hugging Face model repo (via token)
         env:
@@ -73,29 +85,36 @@ jobs:
           set -e
           echo "Cloning https://huggingface.co/${{ env.HF_REPO }} ..."
           rm -rf hf-repo || true
-          # Use token-based clone; ensure token has write access to the HF repo
+          # Token-based clone; token should have write access to the HF repo
           git clone https://x-access-token:${HF_TOKEN}@huggingface.co/${{ env.HF_REPO }} hf-repo
           ls -la hf-repo
 
-      - name: Copy modelcard to HF repo
+      - name: Copy modelcard to HF repo and commit if changed
         run: |
           set -e
-          # Use env vars: SOURCE_PATH -> DEST_PATH inside hf-repo
+          # Copy source modelcard (or README) into HF repo
           cp -v "${{ env.SOURCE_PATH }}" "hf-repo/${{ env.DEST_PATH }}"
-          # Also copy README if you want (optional)
+          # Optional: also copy README.md or other docs if desired
           # cp -v README.md hf-repo/README.md || true
+
           cd hf-repo
           git config user.email "github-actions@users.noreply.github.com"
           git config user.name "github-actions[bot]"
-          # show diff
-          git status --porcelain
+
+          # Stage the file(s)
           git add "${{ env.DEST_PATH }}" || true
+
+          # If nothing changed, exit cleanly
           if git diff --cached --quiet; then
             echo "No changes to commit."
-          else
-            git commit -m "Auto-sync modelcard from GitHub -> Hugging Face (via Actions)" || true
-            git push origin HEAD:main
+            exit 0
           fi
 
+          # Commit and push changes
+          git commit -m "Auto-sync modelcard from GitHub -> Hugging Face (via Actions)" || true
+          # Push directly to main of the HF repo
+          git push origin HEAD:main
+
       - name: Success message
-        run: echo "Sync complete. If there were changes, they have been pushed to https://huggingface.co/${{ env.HF_REPO }}"
+        run: |
+          echo "Sync complete. If there were changes, they have been pushed to https://huggingface.co/${{ env.HF_REPO }}"
