@@ -1,28 +1,27 @@
+---
 language: "en"
 license: "apache-2.0"
 tags:
-
-- "time-series"
-- "forecasting"
-- "finance"
-- "quantile-regression"
-- "cashflow"
-- "anomaly-detection"
-  library_name: "scikit-learn"
-  datasets:
-- "custom/csv"
-  metrics:
-- "wql"
-- "mase"
-- "rmse"
-  inference: "python_function"
-  model-index:
-- name: "maxAI-cash-quantile"
-  results:
-  - task: "time-series-forecasting"
-    dataset: "tenant_csv_samples"
-    metrics: { wql_p50: "see-modelcard", mase: "see-modelcard" }
-
+  - "time-series"
+  - "forecasting"
+  - "finance"
+  - "quantile-regression"
+  - "cashflow"
+  - "anomaly-detection"
+library_name: "scikit-learn"
+datasets:
+  - "custom/csv"
+metrics:
+  - "wql"
+  - "mase"
+  - "rmse"
+inference: "python_function"
+model-index:
+  - name: "maxAI-cash-quantile"
+    results:
+      - task: "time-series-forecasting"
+        dataset: "tenant_csv_samples"
+        metrics: { wql_p50: "see-modelcard", mase: "see-modelcard" }
 ---
 
 # Model Card — maxAI Finance (Cashflow Forecaster)
