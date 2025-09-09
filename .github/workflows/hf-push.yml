@@ -1,120 +1,88 @@
-name: Push Hugging Face
+name: Push code/docs to Huggingface
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
     paths:
       - "modelcard.md"
-      - "docs/modelcard.md"
+      - "docs/**"
       - "README.md"
+      - ".github/workflows/**"
+      - "src/**"
+      - "notebooks/**"
 
 permissions:
   contents: write
 
 env:
   HF_REPO: "felixombura/maxai-finance-cash"
-  SOURCE_PATH: "modelcard.md"
-  DEST_PATH: "modelcard.md"
+  SOURCE_ROOT: "."
+  DEST_ROOT: "."
 
 jobs:
-  sync-to-hf:
+  sync:
     runs-on: ubuntu-latest
+    env:
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
 
     steps:
-      - name: Checkout repo
+      - name: Checkout GitHub repo (with LFS)
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 0
+          lfs: true
 
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.11"
-
-      - name: Install tools & deps (pyyaml, huggingface_hub, git-lfs)
+      - name: Install git-lfs (for model artifacts) and dependencies
         run: |
-          set -e
-          python -m pip install --upgrade pip
-          # Install PyYAML (for frontmatter validation) and huggingface_hub (optional)
-          pip install pyyaml huggingface_hub
-          # Ensure git-lfs is available for pushing large files (optional for model artifacts)
           sudo apt-get update -y
           sudo apt-get install -y git-lfs || true
           git lfs install || true
 
-      - name: Validate YAML frontmatter in source modelcard
+      - name: Verify HF token present
         run: |
-          python - <<'PY'
-          import re, sys, yaml, pathlib
-          p = pathlib.Path("${{ env.SOURCE_PATH }}")
-          if not p.exists():
-              print(f"ERROR: Source path {p} not found; aborting.")
-              sys.exit(1)
-          s = p.read_text(encoding='utf-8')
-          # Look for YAML frontmatter at the top of the file
-          m = re.match(r'^---\n(.*?)\n---\n', s, flags=re.S)
-          if not m:
-              print("ERROR: No YAML frontmatter found at top of file. Add frontmatter (--- ... ---) to the file.")
-              sys.exit(2)
-          try:
-              meta = yaml.safe_load(m.group(1))
-          except Exception as e:
-              print("ERROR: Invalid YAML frontmatter:", e)
-              sys.exit(3)
-          # Required frontmatter keys
-          required = ("language", "license")
-          missing = [r for r in required if r not in (meta or {})]
-          if missing:
-              print(f"ERROR: frontmatter missing required key(s): {', '.join(missing)}")
-              sys.exit(4)
-          print("YAML frontmatter validated.")
-          PY
-
-      - name: Ensure HF_TOKEN is set
-        run: |
-          if [ -z "${{ secrets.HF_TOKEN }}" ]; then
-            echo "ERROR: HF_TOKEN secret not found. Add it in repository Settings -> Secrets -> Actions."
+          if [ -z "${HF_TOKEN}" ]; then
+            echo "ERROR: HF_TOKEN secret not found. Add it in Settings -> Secrets -> Actions"
             exit 1
           fi
 
-      - name: Clone Hugging Face model repo (via token)
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+      - name: Create temporary working dir
+        run: |
+          rm -rf hf-repo || true
+          mkdir hf-repo
+
+      - name: Clone Hugging Face repo with token
         run: |
           set -e
-          echo "Cloning https://huggingface.co/${{ env.HF_REPO }} ..."
-          rm -rf hf-repo || true
-          # Token-based clone; token should have write access to the HF repo
-          git clone https://x-access-token:${HF_TOKEN}@huggingface.co/${{ env.HF_REPO }} hf-repo
+          echo "Cloning https://huggingface.co/${HF_REPO} ..."
+          # Token must have write access
+          git clone https://x-access-token:${HF_TOKEN}@huggingface.co/${HF_REPO} hf-repo
           ls -la hf-repo
 
-      - name: Copy modelcard to HF repo and commit if changed
+      - name: Copy files to HF repo (selective)
         run: |
           set -e
-          # Copy source modelcard (or README) into HF repo
-          cp -v "${{ env.SOURCE_PATH }}" "hf-repo/${{ env.DEST_PATH }}"
-          # Optional: also copy README.md or other docs if desired
-          # cp -v README.md hf-repo/README.md || true
+          # Example: copy modelcard, readme, src, notebooks, docs
+          cp -av modelcard.md hf-repo/ || true
+          cp -av README.md hf-repo/ || true
+          cp -av docs/ hf-repo/ || true
+          cp -av src/ hf-repo/src || true
+          cp -av notebooks/ hf-repo/notebooks || true
+          # Note: adjust the cp lines above to match what you want to sync
 
+      - name: Commit & push if changed
+        run: |
+          set -e
           cd hf-repo
           git config user.email "github-actions@users.noreply.github.com"
           git config user.name "github-actions[bot]"
-
-          # Stage the file(s)
-          git add "${{ env.DEST_PATH }}" || true
-
-          # If nothing changed, exit cleanly
+          git add -A
           if git diff --cached --quiet; then
             echo "No changes to commit."
             exit 0
           fi
-
-          # Commit and push changes
-          git commit -m "Auto-sync modelcard from GitHub -> Hugging Face (via Actions)" || true
-          # Push directly to main of the HF repo
+          git commit -m "Sync from GitHub: auto-update code/docs (via Actions)"
+          # Push to HF main (origin created by clone)
           git push origin HEAD:main
 
-      - name: Success message
-        run: |
-          echo "Sync complete. If there were changes, they have been pushed to https://huggingface.co/${{ env.HF_REPO }}"
+      - name: Done
+        run: echo "Pushed changes to https://huggingface.co/${HF_REPO}"
