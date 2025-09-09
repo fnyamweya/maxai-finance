@@ -1,10 +1,26 @@
+---
+language: "en"
+license: "apache-2.0"
+tags:
+  - "time-series"
+  - "forecasting"
+  - "finance"
+  - "quantile-regression"
+  - "cashflow"
+  - "anomaly-detection"
+library_name: "scikit-learn"
+datasets:
+  - "custom/csv"
+inference: "python_function"
+---
 
 # maxAI — Finance Intelligence (Cashflow + Anomaly)
 
-**Tagline:** *See the money before it moves.*  
+**Tagline:** _See the money before it moves._  
 **What:** Open‑source cashflow forecasting and anomaly radar for ERP finance modules.
 
 ## Features (v0.1)
+
 - Daily/weekly **cashflow forecast** with **P10/P50/P90** bands (quantile GBDT).
 - **Traffic‑light** early warnings (green/yellow/red) for cash tightness.
 - **Anomaly scan** on daily net cash (Isolation Forest).
@@ -34,6 +50,7 @@ maxai-space-demo
 ```
 
 ### CSV schema: `cash_daily.csv`
+
 - `date` (YYYY-MM-DD)
 - `inflow` (float)
 - `outflow` (float)
